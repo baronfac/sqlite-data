@@ -2,7 +2,6 @@ import SQLiteData
 import SwiftUI
 import SwiftUINavigation
 
-@MainActor
 @Observable
 final class SyncUpDetailModel: HashableObject {
   var destination: Destination?
@@ -37,7 +36,7 @@ final class SyncUpDetailModel: HashableObject {
     self.destination = destination
     _attendees = FetchAll(Attendee.where { $0.syncUpID.eq(syncUp.id) })
     _meetings = FetchAll(Meeting.where { $0.syncUpID.eq(syncUp.id) })
-    _syncUp = FetchOne(wrappedValue: syncUp, SyncUp.find(syncUp.id))
+    _syncUp = FetchOne(wrappedValue: syncUp)
   }
 
   func deleteMeetings(atOffsets indices: IndexSet) {
@@ -270,14 +269,18 @@ struct MeetingView: View {
   }
 }
 
-#Preview {
-  let syncUp = try! prepareDependencies {
+#Preview(
+  traits: .dependencies {
     try $0.bootstrapDatabase()
     try? $0.defaultDatabase.seedSampleData()
-    return try $0.defaultDatabase.read { db in
+  }
+) {
+  let syncUp = {
+    @Dependency(\.defaultDatabase) var database
+    return try! database.read { db in
       try SyncUp.fetchOne(db)!
     }
-  }
+  }()
   NavigationStack {
     SyncUpDetailView(model: SyncUpDetailModel(syncUp: syncUp))
   }
